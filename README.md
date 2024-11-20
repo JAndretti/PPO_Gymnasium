@@ -3,6 +3,7 @@
 This project implements a reinforcement learning agent using the PPO (Proximal Policy Optimization) algorithm in Gymnasium simulation environments. Training curves and models are visualized and logged using Wandb.
 
 ## Project Structure
+```
 ├── launch_HP_sweep.py
 ├── src/ │
     ├── agent.py │
@@ -15,6 +16,7 @@ This project implements a reinforcement learning agent using the PPO (Proximal P
     ├── memory.py │
     ├── network.py │
     ├── test_actor.py
+```
 
 ### Main Files
 
