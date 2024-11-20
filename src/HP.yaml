@@ -1,0 +1,28 @@
+PROJECT: "PPO"
+GROUP: "2.0"
+
+# Environment
+ENV_NAME: "LunarLander-v3" #'Acrobot-v1' # "MountainCar-v0" # "LunarLander-v3" # CartPole-v1
+
+# Wandb
+LOG: True
+
+# Device
+DEVICE: "cpu"
+
+# Training
+UPDATA_EVERY: 20
+BATCH_SIZE: 5
+ALPHA: 0.0003
+EPOCHS_TRAIN: 4
+N_EPISODES: 1000
+GAMMA: 0.99
+GAE_LAMBDA: 0.95
+POLICY_CLIP: 0.2
+
+# Test
+FOLDER: "/Users/julesandretti/Documents/Dev/wandb/PPO/models/20241119_193550_3lxk8zpe/"
+FILE: ""
+NB_EPISODES: 20
+RANDOM: True
+THRESHOLD: 0.9

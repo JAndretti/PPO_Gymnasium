@@ -1,0 +1,14 @@
+ALPHA: 
+- 0.0001
+
+POLICY_CLIP: 
+- 0.2
+
+UPDATA_EVERY: 
+- 80
+
+BATCH_SIZE: 
+- 10
+
+N_EPISODES: 
+- 4000
