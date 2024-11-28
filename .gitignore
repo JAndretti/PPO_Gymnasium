@@ -1,4 +1,6 @@
 # Ignore Python cache directories
 __pycache__/
 
-key.txt
+/src/key.txt
+
+.venv/
