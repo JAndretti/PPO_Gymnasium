@@ -2,10 +2,10 @@ PROJECT: "PPO"
 GROUP: "2.0"
 
 # Environment
-ENV_NAME: "LunarLander-v3" #'Acrobot-v1' # "MountainCar-v0" # "LunarLander-v3" # CartPole-v1
+ENV_NAME: "Acrobot-v1" #'Acrobot-v1' # "MountainCar-v0" # "LunarLander-v3" # CartPole-v1
 
 # Wandb
-LOG: True
+LOG: False
 
 # Device
 DEVICE: "cpu"
@@ -21,8 +21,8 @@ GAE_LAMBDA: 0.95
 POLICY_CLIP: 0.2
 
 # Test
-FOLDER: "/Users/julesandretti/Documents/Dev/wandb/PPO/models/20241119_193550_3lxk8zpe/"
+FOLDER: "/Users/julesandretti/Documents/Dev/wandb/PPO/models/20241119_164702_136gycbi/"
 FILE: ""
-NB_EPISODES: 20
-RANDOM: True
+NB_EPISODES: 5
+RANDOM: False
 THRESHOLD: 0.9
