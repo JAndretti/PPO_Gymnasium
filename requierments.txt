@@ -1,0 +1,10 @@
+torch
+numpy
+PyYAML
+tqdm
+gymnasium
+matplotlib
+wandb
+swig
+# pip install wheel setuptools pip --upgrade
+"gymnasium[box2d]"

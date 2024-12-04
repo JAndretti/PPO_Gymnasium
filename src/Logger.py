@@ -7,7 +7,7 @@ import wandb
 
 from HP import _HP
 
-WANDB_DIRECTORY = "/Users/julesandretti/Documents/Dev/wandb/"
+WANDB_DIRECTORY = "/Users/jandretti/Documents/wandb/"
 
 
 # Weights & Biases #

@@ -50,6 +50,54 @@ class Agent:
 
         return action, probs, value
 
+    def split_episodes(self, rewards, values, dones):
+        """
+        Split data into individual episodes based on the `dones` flags.
+        """
+        episodes_rewards, episodes_values, episodes_dones = [], [], []
+        start = 0
+
+        for i, done in enumerate(dones):
+            if done:  # End of an episode
+                episodes_rewards.append(rewards[start : i + 1])
+                episodes_values.append(values[start : i + 1])
+                episodes_dones.append(dones[start : i + 1])
+                start = i + 1
+
+        return episodes_rewards, episodes_values, episodes_dones
+
+    def calculate_gae(self, rewards, values, dones):
+        """
+        Calculate Generalized Advantage Estimation (GAE) for multiple episodes.
+        """
+        all_advantages = []
+
+        for ep_rews, ep_vals, ep_dones in zip(rewards, values, dones):
+            advantages = []
+            last_advantage = 0
+
+            # Backward pass for GAE calculation
+            for t in reversed(range(len(ep_rews))):
+                if t + 1 < len(ep_rews):
+                    delta = (
+                        ep_rews[t]
+                        + self.gamma * ep_vals[t + 1] * (1 - ep_dones[t + 1])
+                        - ep_vals[t]
+                    )
+                else:
+                    delta = ep_rews[t] - ep_vals[t]
+
+                advantage = (
+                    delta
+                    + self.gamma * self.gae_lambda * (1 - ep_dones[t]) * last_advantage
+                )
+                last_advantage = advantage
+                advantages.insert(0, advantage)
+
+            all_advantages.extend(advantages)  # Concatenate advantages
+
+        return torch.tensor(all_advantages, dtype=torch.float)
+
     def learn(self):
         """
         Perform the PPO optimization process. This function updates the actor (policy)
@@ -59,7 +107,13 @@ class Agent:
         The update is done over multiple epochs,
         processing the data in mini-batches to stabilize the training.
         """
+        batch_loss = []
+        batch_actor_loss = []
+        batch_critic_loss = []
         for _ in range(self.n_epochs):
+            epoch_loss = []
+            epoch_actor_loss = []
+            epoch_critic_loss = []
             # Generate batches of data from memory
             (
                 state_arr,  # States observed during interaction
@@ -73,37 +127,21 @@ class Agent:
             ) = self.memory.generate_batches()
 
             values = vals_arr  # Value estimates from the critic
-            advantage = np.zeros(
-                len(reward_arr), dtype=np.float32
-            )  # Initialize advantage array
 
-            # Compute Generalized Advantage Estimation (GAE)
-            # GAE advantage formula:
-            # A_t = sum_{k=t}^T (γ^k-t * λ^(k-t) * δ_k),
-            # where δ_k = r_k + γ * V(s_{k+1}) * (1 - done_k) - V(s_k)
-            for t in range(len(reward_arr) - 1):
-                discount = 1  # Initialize discount factor γ^k-t
-                a_t = 0  # Initialize advantage estimate for time step t
-                for k in range(t, len(reward_arr) - 1):
-                    # Compute the temporal difference error δ_k
-                    delta_k = (
-                        reward_arr[k]
-                        + self.gamma * values[k + 1] * (1 - int(dones_arr[k]))
-                        - values[k]
-                    )
-                    a_t += discount * delta_k  # Add discounted TD error to advantage
-                    discount *= (
-                        self.gamma * self.gae_lambda
-                    )  # Update discount factor with λ
-                advantage[t] = a_t  # Store computed advantage for time step t
-
-            # Convert advantage to tensor for PyTorch computations
-            advantage = torch.tensor(advantage, dtype=torch.float32).to(
-                self.actor.device
-            )
             values = torch.tensor(values, dtype=torch.float32).to(
                 self.actor.device
             )  # Convert values to tensor in float32
+
+            # Split into episodes
+            episodes_rewards, episodes_values, episodes_dones = self.split_episodes(
+                reward_arr, vals_arr, dones_arr
+            )
+
+            # Calculate advantages
+            advantages = self.calculate_gae(
+                episodes_rewards, episodes_values, episodes_dones
+            )
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
 
             # Process data in mini-batches
             for batch in batches:
@@ -131,22 +169,21 @@ class Agent:
                 new_probs = dist.log_prob(actions)
 
                 # Compute the probability ratio: r_t = π_θ(a|s) / π_θ_old(a|s)
-                prob_ratio = new_probs.exp() / old_probs.exp()
-                # Alternatively: prob_ratio = (new_probs - old_probs).exp()
+                prob_ratio = (new_probs - old_probs).exp()
 
                 # Compute the actor loss (surrogate objective with clipping)
                 # L_clip = min(r_t * A_t, clip(r_t, 1-ε, 1+ε) * A_t)
-                weighted_probs = advantage[batch] * prob_ratio
+                weighted_probs = advantages[batch] * prob_ratio
                 weighted_clipped_probs = (
                     torch.clamp(prob_ratio, 1 - self.policy_clip, 1 + self.policy_clip)
-                    * advantage[batch]
+                    * advantages[batch]
                 )
                 actor_loss = -torch.min(weighted_probs, weighted_clipped_probs).mean()
 
                 # Compute the critic loss
                 # (squared error between returns and value estimates)
                 # L_value = (R_t - V(s))^2
-                returns = advantage[batch] + values[batch]  # R_t = A_t + V(s)
+                returns = advantages[batch] + values[batch]  # R_t = A_t + V(s)
                 critic_loss = (returns - critic_value) ** 2
                 critic_loss = critic_loss.mean()
 
@@ -161,6 +198,12 @@ class Agent:
                 total_loss.backward()
                 self.actor.optimizer.step()
                 self.critic.optimizer.step()
-
+                epoch_loss.append(total_loss.item())
+                epoch_actor_loss.append(actor_loss.item())
+                epoch_critic_loss.append(critic_loss.item())
+            batch_loss.append(np.mean(epoch_loss))
+            batch_actor_loss.append(np.mean(epoch_actor_loss))
+            batch_critic_loss.append(np.mean(epoch_critic_loss))
         # Clear the memory after each optimization step
         self.memory.clear_memory()
+        return batch_loss, batch_actor_loss, batch_critic_loss

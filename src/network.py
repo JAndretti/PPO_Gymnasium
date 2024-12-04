@@ -52,16 +52,16 @@ class FeedForwardNN(nn.Module):
         print(f"Using device for {str} : {self.device}")
         self.device = self.HP["DEVICE"]
         self.neural = nn.Sequential(
-            nn.Linear(in_dim, 64),
+            nn.Linear(in_dim, 16),
             nn.ReLU(),
-            nn.Linear(64, 64),
-            nn.ReLU(),
-            nn.Linear(64, out_dim),
+            nn.Linear(16, out_dim),
         )
         if self.actor:
             self.neural.append(nn.Softmax(dim=-1))
 
-        self.optimizer = optim.Adam(self.parameters(), lr=alpha)
+        self.optimizer = optim.Adam(
+            self.parameters(), lr=alpha, weight_decay=1e-2, betas=(0.9, 0.999)
+        )
         self.to(self.device)
 
     def forward(self, obs):
